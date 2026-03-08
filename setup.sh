@@ -378,59 +378,87 @@ collect_keys() {
 
   # LLM Provider
   echo -e "${BOLD}LLM Provider:${NC}"
-  echo "  1) GitHub Copilot proxy (free with Copilot subscription)"
-  echo "  2) OpenAI API direct"
-  echo "  3) Anthropic API direct"
-  echo "  4) Google Gemini API"
-  echo "  5) OpenRouter (access 400+ models)"
-  echo "  6) Kimi / Moonshot AI"
-  echo "  7) Other (manual config later)"
   echo ""
-  ask "Choose provider [1-7]"
+  echo "  ${BOLD}API Key providers:${NC}"
+  echo "  1) OpenAI API"
+  echo "  2) Anthropic API"
+  echo "  3) Google Gemini API"
+  echo "  4) OpenRouter (400+ models)"
+  echo "  5) Kimi / Moonshot AI"
+  echo ""
+  echo "  ${BOLD}OAuth / subscription login (no API key needed):${NC}"
+  echo "  6) GitHub Copilot (free with Copilot subscription)"
+  echo "  7) OpenAI Codex OAuth (ChatGPT subscription)"
+  echo "  8) Google Gemini CLI OAuth (Google account)"
+  echo "  9) Anthropic Claude setup-token (Max subscription)"
+  echo ""
+  echo "  0) Other / manual config"
+  echo ""
+  ask "Choose provider [0-9]"
   read -r PROVIDER_CHOICE
-  PROVIDER_CHOICE="${PROVIDER_CHOICE:-1}"
+  PROVIDER_CHOICE="${PROVIDER_CHOICE:-6}"
 
   case "$PROVIDER_CHOICE" in
     1)
-      LLM_PROVIDER="copilot"
-      info "Copilot proxy will be configured on localhost:4141"
-      info "Make sure copilot-api is running: npx copilot-api start --port 4141"
-      COPILOT_API_KEY="copilot-proxy-local"
-      ;;
-    2)
       LLM_PROVIDER="openai"
       ask "OpenAI API key (sk-...)"
       read -rs OPENAI_DIRECT_KEY
       echo ""
       ;;
-    3)
+    2)
       LLM_PROVIDER="anthropic"
       ask "Anthropic API key (sk-ant-...)"
       read -rs ANTHROPIC_KEY
       echo ""
       ;;
-    4)
+    3)
       LLM_PROVIDER="gemini"
       ask "Google Gemini API key"
       read -rs GEMINI_KEY
       echo ""
       info "Get a free key at https://aistudio.google.com/apikey"
       ;;
-    5)
+    4)
       LLM_PROVIDER="openrouter"
       ask "OpenRouter API key (sk-or-...)"
       read -rs OPENROUTER_KEY
       echo ""
       info "Browse models at https://openrouter.ai/models"
       ;;
-    6)
+    5)
       LLM_PROVIDER="kimi"
       ask "Moonshot/Kimi API key"
       read -rs KIMI_KEY
       echo ""
       info "Get a key at https://platform.moonshot.ai"
       ;;
+    6)
+      LLM_PROVIDER="copilot"
+      info "Copilot proxy will be configured on localhost:4141"
+      info "Make sure copilot-api is running: npx copilot-api start --port 4141"
+      COPILOT_API_KEY="copilot-proxy-local"
+      ;;
     7)
+      LLM_PROVIDER="openai-codex-oauth"
+      info "After setup completes, you'll authenticate via browser OAuth."
+      info "Requires an active ChatGPT Plus/Pro/Team subscription."
+      OAUTH_DEFERRED="openai-codex"
+      ;;
+    8)
+      LLM_PROVIDER="gemini-cli-oauth"
+      info "After setup completes, you'll authenticate via browser OAuth."
+      info "Uses your Google account — free tier available."
+      warn "Unofficial integration. Use a non-critical Google account."
+      OAUTH_DEFERRED="google-gemini-cli"
+      ;;
+    9)
+      LLM_PROVIDER="anthropic-oauth"
+      info "After setup completes, you'll authenticate via setup-token."
+      info "Requires Claude Max/Team subscription."
+      warn "Anthropic may restrict non-Claude usage. Check current terms."
+      OAUTH_DEFERRED="anthropic"
+      ;;
+    0)
       LLM_PROVIDER="manual"
       warn "You'll need to configure the model provider in openclaw.json manually"
       ;;
@@ -873,6 +901,13 @@ elif llm_provider == "kimi":
     }
     config['agents']['defaults']['model']['primary'] = "kimi/kimi-k2"
     config['agents']['defaults']['heartbeat']['model'] = "kimi/moonshot-v1-128k"
+elif llm_provider == "openai-codex-oauth":
+    config['agents']['defaults']['model']['primary'] = "openai-codex/gpt-4o"
+elif llm_provider == "gemini-cli-oauth":
+    config['agents']['defaults']['model']['primary'] = "google-gemini-cli/gemini-2.5-pro"
+    config['agents']['defaults']['heartbeat']['model'] = "google-gemini-cli/gemini-2.5-flash"
+elif llm_provider == "anthropic-oauth":
+    config['agents']['defaults']['model']['primary'] = "anthropic/claude-sonnet-4-5-20250514"
 
 # Skills with keys
 if openai_skills_key:
@@ -1630,6 +1665,28 @@ show_summary() {
     echo "       tmux new-session -d -s copilot 'npx copilot-api start --port 4141'"
     echo ""
     STEP=$((STEP + 1))
+  elif [ "$LLM_PROVIDER" = "openai-codex-oauth" ]; then
+    if [ -z "${OAUTH_DEFERRED:-}" ]; then
+      echo "    $STEP. Authenticate with OpenAI Codex (if not done during setup):"
+      echo "       openclaw models auth login --provider openai-codex --set-default"
+      echo ""
+      STEP=$((STEP + 1))
+    fi
+  elif [ "$LLM_PROVIDER" = "gemini-cli-oauth" ]; then
+    if [ -z "${OAUTH_DEFERRED:-}" ]; then
+      echo "    $STEP. Authenticate with Gemini CLI (if not done during setup):"
+      echo "       openclaw plugins enable google-gemini-cli-auth"
+      echo "       openclaw models auth login --provider google-gemini-cli --set-default"
+      echo ""
+      STEP=$((STEP + 1))
+    fi
+  elif [ "$LLM_PROVIDER" = "anthropic-oauth" ]; then
+    if [ -z "${OAUTH_DEFERRED:-}" ]; then
+      echo "    $STEP. Authenticate with Anthropic (if not done during setup):"
+      echo "       openclaw models auth paste-token --provider anthropic"
+      echo ""
+      STEP=$((STEP + 1))
+    fi
   fi
 
   echo "    $STEP. Start OpenClaw:"
@@ -1923,6 +1980,51 @@ CONSOLEEOF
     success "Skills setup complete."
   else
     info "Skipped. Run later with: openclaw configure --section skills"
+  fi
+
+  # ---- OAuth / Deferred Auth Login ----
+  if [ -n "${OAUTH_DEFERRED:-}" ]; then
+    echo ""
+    echo -e "${GREEN}╔═══════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║${NC}  ${BOLD}🔐 LLM Provider Authentication${NC}               ${GREEN}║${NC}"
+    echo -e "${GREEN}╚═══════════════════════════════════════════════╝${NC}"
+    echo ""
+
+    case "$OAUTH_DEFERRED" in
+      openai-codex)
+        info "Authenticating with OpenAI Codex OAuth..."
+        info "This will open a browser for ChatGPT login."
+        echo ""
+        openclaw models auth login --provider openai-codex --set-default 2>&1 || {
+          warn "OAuth login failed or was skipped."
+          info "Run later: openclaw models auth login --provider openai-codex --set-default"
+        }
+        ;;
+      google-gemini-cli)
+        info "Enabling Gemini CLI auth plugin..."
+        openclaw plugins enable google-gemini-cli-auth 2>/dev/null
+        echo ""
+        info "Authenticating with Google Gemini CLI OAuth..."
+        info "This will open a browser for Google account login."
+        echo ""
+        openclaw models auth login --provider google-gemini-cli --set-default 2>&1 || {
+          warn "OAuth login failed or was skipped."
+          info "Run later:"
+          info "  openclaw plugins enable google-gemini-cli-auth"
+          info "  openclaw models auth login --provider google-gemini-cli --set-default"
+        }
+        ;;
+      anthropic)
+        info "Authenticating with Anthropic setup-token..."
+        info "You'll need your Claude setup token from claude.ai/settings."
+        echo ""
+        openclaw models auth paste-token --provider anthropic 2>&1 || {
+          warn "Token setup failed or was skipped."
+          info "Run later: openclaw models auth paste-token --provider anthropic"
+        }
+        ;;
+    esac
+    echo ""
   fi
 
   show_summary
