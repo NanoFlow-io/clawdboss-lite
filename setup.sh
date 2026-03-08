@@ -415,7 +415,23 @@ collect_keys() {
 
   # Discord (only if using Discord interface)
   if [ "$USE_DISCORD" = true ]; then
-    echo -e "${BOLD}Discord:${NC}"
+    echo -e "${BOLD}Discord Setup:${NC}"
+    echo ""
+    info "You need a Discord bot. If you don't have one yet, follow these steps:"
+    echo ""
+    echo "  1. Go to https://discord.com/developers/applications"
+    echo "  2. Click 'New Application' → name it → Create"
+    echo "  3. Left sidebar → 'Bot' → 'Reset Token' → copy the token"
+    echo "  4. On the Bot page, enable ALL THREE Privileged Gateway Intents:"
+    echo "     ✅ Presence Intent  ✅ Server Members Intent  ✅ Message Content Intent"
+    echo "  5. Left sidebar → 'OAuth2' → URL Generator"
+    echo "     Scopes: bot  |  Permissions: Administrator (or Send/Read Messages + more)"
+    echo "     Copy the URL → open in browser → select your server → Authorize"
+    echo "  6. In Discord: Settings → Advanced → enable Developer Mode"
+    echo "     Right-click server name → 'Copy Server ID'"
+    echo "     Right-click your username → 'Copy User ID'"
+    echo "     Right-click the channel → 'Copy Channel ID'"
+    echo ""
     ask "Discord bot token"
     read -rs DISCORD_TOKEN
     echo ""
