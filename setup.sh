@@ -381,9 +381,12 @@ collect_keys() {
   echo "  1) GitHub Copilot proxy (free with Copilot subscription)"
   echo "  2) OpenAI API direct"
   echo "  3) Anthropic API direct"
-  echo "  4) Other (manual config later)"
+  echo "  4) Google Gemini API"
+  echo "  5) OpenRouter (access 400+ models)"
+  echo "  6) Kimi / Moonshot AI"
+  echo "  7) Other (manual config later)"
   echo ""
-  ask "Choose provider [1/2/3/4]"
+  ask "Choose provider [1-7]"
   read -r PROVIDER_CHOICE
   PROVIDER_CHOICE="${PROVIDER_CHOICE:-1}"
 
@@ -407,6 +410,27 @@ collect_keys() {
       echo ""
       ;;
     4)
+      LLM_PROVIDER="gemini"
+      ask "Google Gemini API key"
+      read -rs GEMINI_KEY
+      echo ""
+      info "Get a free key at https://aistudio.google.com/apikey"
+      ;;
+    5)
+      LLM_PROVIDER="openrouter"
+      ask "OpenRouter API key (sk-or-...)"
+      read -rs OPENROUTER_KEY
+      echo ""
+      info "Browse models at https://openrouter.ai/models"
+      ;;
+    6)
+      LLM_PROVIDER="kimi"
+      ask "Moonshot/Kimi API key"
+      read -rs KIMI_KEY
+      echo ""
+      info "Get a key at https://platform.moonshot.ai"
+      ;;
+    7)
       LLM_PROVIDER="manual"
       warn "You'll need to configure the model provider in openclaw.json manually"
       ;;
@@ -566,6 +590,12 @@ ENVEOF
     echo "OPENAI_API_KEY=${OPENAI_DIRECT_KEY}" >> "$ENV_FILE"
   elif [ "$LLM_PROVIDER" = "anthropic" ]; then
     echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> "$ENV_FILE"
+  elif [ "$LLM_PROVIDER" = "gemini" ]; then
+    echo "GEMINI_API_KEY=${GEMINI_KEY}" >> "$ENV_FILE"
+  elif [ "$LLM_PROVIDER" = "openrouter" ]; then
+    echo "OPENROUTER_API_KEY=${OPENROUTER_KEY}" >> "$ENV_FILE"
+  elif [ "$LLM_PROVIDER" = "kimi" ]; then
+    echo "KIMI_API_KEY=${KIMI_KEY}" >> "$ENV_FILE"
   fi
 
   if [ "$USE_DISCORD" = true ]; then
@@ -800,6 +830,49 @@ elif llm_provider == "anthropic":
         }
     }
     config['agents']['defaults']['model']['primary'] = "anthropic/claude-sonnet-4-5-20250514"
+elif llm_provider == "gemini":
+    config['models']['providers'] = {
+        "google": {
+            "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+            "apiKey": "${GEMINI_API_KEY}",
+            "api": "google-generative-ai",
+            "models": [
+                {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro", "input": ["text", "image"], "contextWindow": 1048576, "maxTokens": 65536},
+                {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "input": ["text", "image"], "contextWindow": 1048576, "maxTokens": 65536}
+            ]
+        }
+    }
+    config['agents']['defaults']['model']['primary'] = "google/gemini-2.5-pro"
+    config['agents']['defaults']['heartbeat']['model'] = "google/gemini-2.5-flash"
+elif llm_provider == "openrouter":
+    config['models']['providers'] = {
+        "openrouter": {
+            "baseUrl": "https://openrouter.ai/api/v1",
+            "apiKey": "${OPENROUTER_API_KEY}",
+            "api": "openai-completions",
+            "models": [
+                {"id": "anthropic/claude-sonnet-4", "name": "Claude Sonnet 4 (OpenRouter)", "input": ["text", "image"], "contextWindow": 200000, "maxTokens": 16384},
+                {"id": "openai/gpt-4o", "name": "GPT-4o (OpenRouter)", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 16384},
+                {"id": "google/gemini-2.5-pro-preview", "name": "Gemini 2.5 Pro (OpenRouter)", "input": ["text", "image"], "contextWindow": 1048576, "maxTokens": 65536}
+            ]
+        }
+    }
+    config['agents']['defaults']['model']['primary'] = "openrouter/anthropic/claude-sonnet-4"
+    config['agents']['defaults']['heartbeat']['model'] = "openrouter/openai/gpt-4o"
+elif llm_provider == "kimi":
+    config['models']['providers'] = {
+        "kimi": {
+            "baseUrl": "https://api.moonshot.cn/v1",
+            "apiKey": "${KIMI_API_KEY}",
+            "api": "openai-completions",
+            "models": [
+                {"id": "kimi-k2", "name": "Kimi K2", "input": ["text", "image"], "contextWindow": 131072, "maxTokens": 16384},
+                {"id": "moonshot-v1-128k", "name": "Moonshot v1 128K", "input": ["text"], "contextWindow": 131072, "maxTokens": 16384}
+            ]
+        }
+    }
+    config['agents']['defaults']['model']['primary'] = "kimi/kimi-k2"
+    config['agents']['defaults']['heartbeat']['model'] = "kimi/moonshot-v1-128k"
 
 # Skills with keys
 if openai_skills_key:
