@@ -1,0 +1,165 @@
+{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "copilot": {
+        "baseUrl": "http://localhost:4141/v1",
+        "apiKey": "${COPILOT_API_KEY}",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "claude-opus-4.6",
+            "name": "Claude Opus 4.6 (Copilot)",
+            "input": ["text", "image"],
+            "contextWindow": 200000,
+            "maxTokens": 32768
+          },
+          {
+            "id": "claude-sonnet-4.5",
+            "name": "Claude Sonnet 4.5 (Copilot)",
+            "input": ["text", "image"],
+            "contextWindow": 200000,
+            "maxTokens": 16384
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "copilot/claude-sonnet-4.5"
+      },
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "heartbeat": {
+        "model": "copilot/claude-sonnet-4.5"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      }
+    },
+    "list": [
+      {
+        "id": "main",
+        "default": true,
+        "workspace": "__WORKSPACE_DIR__",
+        "subagents": {
+          "allowAgents": ["main"]
+        }
+      }
+    ]
+  },
+  "tools": {
+    "web": {
+      "search": {
+        "enabled": true,
+        "apiKey": "${BRAVE_API_KEY}"
+      },
+      "fetch": {
+        "enabled": true
+      }
+    }
+  },
+  "bindings": [
+    {
+      "agentId": "main",
+      "match": {
+        "channel": "discord",
+        "guildId": "__DISCORD_GUILD_ID__"
+      }
+    }
+  ],
+  "messages": {
+    "queue": {
+      "mode": "interrupt",
+      "byChannel": {
+        "discord": "interrupt"
+      },
+      "debounceMs": 8000,
+      "cap": 1,
+      "drop": "old"
+    },
+    "inbound": {
+      "debounceMs": 3000,
+      "byChannel": {
+        "discord": 8000
+      }
+    },
+    "ackReactionScope": "group-mentions"
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto"
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "boot-md": { "enabled": true },
+        "bootstrap-extra-files": { "enabled": true }
+      }
+    }
+  },
+  "channels": {
+    "discord": {
+      "enabled": true,
+      "token": "${DISCORD_BOT_TOKEN}",
+      "groupPolicy": "allowlist",
+      "maxLinesPerMessage": 999,
+      "replyToMode": "first",
+      "dmPolicy": "allowlist",
+      "allowFrom": ["__DISCORD_OWNER_ID__"],
+      "guilds": {
+        "__DISCORD_GUILD_ID__": {
+          "requireMention": false,
+          "users": ["__DISCORD_OWNER_ID__"],
+          "channels": {}
+        }
+      },
+      "execApprovals": {
+        "enabled": true,
+        "approvers": ["__DISCORD_OWNER_ID__"],
+        "target": "channel"
+      }
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "${GATEWAY_AUTH_TOKEN}"
+    }
+  },
+  "skills": {
+    "install": {
+      "nodeManager": "npm"
+    },
+    "entries": {}
+  },
+  "plugins": {
+    "slots": {
+      "memory": "memory-hybrid"
+    },
+    "entries": {
+      "memory-hybrid": {
+        "enabled": true,
+        "config": {
+          "embedding": {
+            "apiKey": "${EMBEDDING_API_KEY}",
+            "model": "text-embedding-3-small"
+          },
+          "autoCapture": false,
+          "autoRecall": true
+        }
+      },
+      "discord": {
+        "enabled": true
+      }
+    }
+  }
+}
