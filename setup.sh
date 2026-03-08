@@ -1501,24 +1501,51 @@ show_summary() {
 
   echo ""
   echo -e "  ${BOLD}Next steps:${NC}"
+  echo ""
+
+  local STEP=1
 
   if [ "$LLM_PROVIDER" = "copilot" ]; then
-    echo "    1. Start copilot proxy:  npx copilot-api start --port 4141"
-    echo "    2. Start OpenClaw:       openclaw gateway start"
-  else
-    echo "    1. Start OpenClaw:       openclaw gateway start"
+    echo "    $STEP. Start the GitHub Copilot proxy (must run before OpenClaw):"
+    echo ""
+    echo "       npx copilot-api start --port 4141"
+    echo ""
+    echo "       On first run it will show a device auth URL + code."
+    echo "       Open the URL in your browser, enter the code, and authorize"
+    echo "       with a GitHub account that has a Copilot subscription."
+    echo ""
+    echo "       To run it in the background:"
+    echo "       tmux new-session -d -s copilot 'npx copilot-api start --port 4141'"
+    echo ""
+    STEP=$((STEP + 1))
   fi
 
-  echo "    2. Check status:         openclaw status"
+  echo "    $STEP. Start OpenClaw:"
+  echo "       openclaw gateway start"
+  STEP=$((STEP + 1))
+
+  echo "    $STEP. Check status:"
+  echo "       openclaw status"
+  STEP=$((STEP + 1))
 
   if [ "$USE_CONSOLE" = true ]; then
-    echo "    3. Start ClawSuite Console:"
+    echo ""
+    echo "    $STEP. Start ClawSuite Console (web dashboard):"
     echo "       cd ~/clawsuite && HOST=0.0.0.0 PORT=3000 node server-entry.js"
-    echo "       Then open http://localhost:3000"
+    echo ""
+    echo "       Then open in your browser:"
+    echo "         • Local:  http://localhost:3000"
+    echo "         • Remote: http://YOUR-SERVER-IP:3000"
+    echo ""
+    echo "       To run it in the background:"
+    echo "       tmux new-session -d -s console 'cd ~/clawsuite && HOST=0.0.0.0 PORT=3000 node server-entry.js'"
+    STEP=$((STEP + 1))
   fi
 
   if [ "$USE_DISCORD" = true ]; then
-    echo "    3. Open Discord and chat with your agent"
+    echo ""
+    echo "    $STEP. Open Discord and chat with your agent in the channel you configured"
+    STEP=$((STEP + 1))
   fi
   echo ""
   echo -e "  ${BOLD}Interface:${NC}"
