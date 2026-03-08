@@ -27,7 +27,7 @@ NC='\033[0m'
 banner() {
   echo ""
   echo -e "${CYAN}╔══════════════════════════════════════════════╗${NC}"
-  echo -e "${CYAN}║${NC}  ${BOLD}🦞 Clawdboss Setup Wizard${NC}                    ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}  ${BOLD}🦞 Clawdboss Setup Wizard${NC}                   ${CYAN}║${NC}"
   echo -e "${CYAN}║${NC}  Pre-hardened OpenClaw by NanoFlow            ${CYAN}║${NC}"
   echo -e "${CYAN}╚══════════════════════════════════════════════╝${NC}"
   echo ""
@@ -803,6 +803,13 @@ elif llm_provider == "anthropic":
 if openai_skills_key:
     config['skills']['entries']['openai-image-gen'] = {"apiKey": "${OPENAI_API_KEY}"}
     config['skills']['entries']['openai-whisper-api'] = {"apiKey": "${OPENAI_API_KEY}"}
+    # If not using OpenAI as LLM provider, add a minimal openai provider for skills
+    if llm_provider != "openai" and "openai" not in config.get('models', {}).get('providers', {}):
+        config.setdefault('models', {}).setdefault('providers', {})['openai'] = {
+            "baseUrl": "https://api.openai.com/v1",
+            "apiKey": "${OPENAI_API_KEY}",
+            "models": []
+        }
 
 if elevenlabs_key:
     config['skills']['entries']['sag'] = {"apiKey": "${ELEVENLABS_API_KEY}"}
@@ -1508,7 +1515,7 @@ with open(config_path, "w") as f:
 show_summary() {
   echo ""
   echo -e "${GREEN}╔══════════════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║${NC}  ${BOLD}✅ Clawdboss Setup Complete!${NC}                 ${GREEN}║${NC}"
+  echo -e "${GREEN}║${NC}  ${BOLD}✅ Clawdboss Setup Complete!${NC}                ${GREEN}║${NC}"
   echo -e "${GREEN}╚══════════════════════════════════════════════╝${NC}"
   echo ""
   echo -e "  ${BOLD}Agent:${NC}     $AGENT_NAME $AGENT_EMOJI"
