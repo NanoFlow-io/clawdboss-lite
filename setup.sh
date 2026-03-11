@@ -293,27 +293,48 @@ collect_agent_info() {
   echo ""
   echo -e "${BOLD}--- Interface ---${NC}"
   echo ""
-  echo "  1) Discord           — Chat with your agents via Discord bot"
-  echo "  2) ClawSuite Console  — Web dashboard with chat, file browser, terminal, cost analytics"
-  echo "  3) Both              — Discord + ClawSuite Console side by side"
+  echo "  1) Discord            — Chat via Discord bot"
+  echo "  2) Telegram           — Chat via Telegram bot"
+  echo "  3) ClawSuite Console  — Web dashboard with chat, file browser, terminal, cost analytics"
+  echo "  4) Discord + Telegram"
+  echo "  5) Discord + Console"
+  echo "  6) Telegram + Console"
+  echo "  7) All three"
   echo ""
-  ask "Choose interface [1/2/3]"
+  ask "Choose interface [1-7]"
   read -r INTERFACE_CHOICE
   INTERFACE_CHOICE="${INTERFACE_CHOICE:-1}"
 
   USE_DISCORD=false
+  USE_TELEGRAM=false
   USE_CONSOLE=false
 
   case "$INTERFACE_CHOICE" in
+    1)
+      USE_DISCORD=true
+      ;;
     2)
-      USE_CONSOLE=true
+      USE_TELEGRAM=true
       ;;
     3)
+      USE_CONSOLE=true
+      ;;
+    4)
+      USE_DISCORD=true
+      USE_TELEGRAM=true
+      ;;
+    5)
       USE_DISCORD=true
       USE_CONSOLE=true
       ;;
-    *)
+    6)
+      USE_TELEGRAM=true
+      USE_CONSOLE=true
+      ;;
+    7)
       USE_DISCORD=true
+      USE_TELEGRAM=true
+      USE_CONSOLE=true
       ;;
   esac
 
@@ -554,6 +575,36 @@ collect_keys() {
     DISCORD_SECURITY_CHANNEL=""
   fi
 
+  # Telegram (only if using Telegram interface)
+  if [ "$USE_TELEGRAM" = true ]; then
+    echo -e "${BOLD}Telegram Setup:${NC}"
+    echo ""
+
+    while true; do
+      ask "Telegram bot token (from @BotFather)"
+      read -rs TELEGRAM_TOKEN
+      echo ""
+      if [[ "$TELEGRAM_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]{30,}$ ]]; then
+        break
+      else
+        error "Invalid Telegram bot token format. Expected: 123456:ABC-DEF..."
+      fi
+    done
+
+    while true; do
+      ask "Your Telegram user ID (numeric, from @userinfobot)"
+      read -r TELEGRAM_OWNER_ID
+      if [[ "$TELEGRAM_OWNER_ID" =~ ^[0-9]+$ ]]; then
+        break
+      else
+        error "Invalid Telegram user ID: must be a number"
+      fi
+    done
+  else
+    TELEGRAM_TOKEN=""
+    TELEGRAM_OWNER_ID=""
+  fi
+
   # Default specialist names if not set (Solo tier)
   COMMS_NAME="${COMMS_NAME:-Knox}"
   RESEARCH_NAME="${RESEARCH_NAME:-Trace}"
@@ -634,6 +685,14 @@ DISCORD_BOT_TOKEN=${DISCORD_TOKEN}
 ENVEOF
   fi
 
+  if [ "$USE_TELEGRAM" = true ]; then
+    cat >> "$ENV_FILE" << ENVEOF
+
+# Telegram
+TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}
+ENVEOF
+  fi
+
   cat >> "$ENV_FILE" << ENVEOF
 
 # Web Search
@@ -681,7 +740,9 @@ generate_config() {
   export CB_OPENAI_SKILLS_KEY="${OPENAI_SKILLS_KEY:-}"
   export CB_ELEVENLABS_KEY="${ELEVENLABS_KEY:-}"
   export CB_USE_DISCORD="$USE_DISCORD"
+  export CB_USE_TELEGRAM="$USE_TELEGRAM"
   export CB_USE_CONSOLE="$USE_CONSOLE"
+  export CB_TELEGRAM_OWNER="${TELEGRAM_OWNER_ID:-}"
 
   # Only export specialist names/channels if deploying
   if [ "$DEPLOY_COMMS" = true ]; then
@@ -711,7 +772,9 @@ deploy_comms = os.environ['CB_DEPLOY_COMMS'] == 'true'
 deploy_research = os.environ['CB_DEPLOY_RESEARCH'] == 'true'
 deploy_security = os.environ['CB_DEPLOY_SECURITY'] == 'true'
 use_discord = os.environ.get('CB_USE_DISCORD', 'true') == 'true'
+use_telegram = os.environ.get('CB_USE_TELEGRAM', 'false') == 'true'
 use_console = os.environ.get('CB_USE_CONSOLE', 'false') == 'true'
+telegram_owner = os.environ.get('CB_TELEGRAM_OWNER', '')
 llm_provider = os.environ['CB_LLM_PROVIDER']
 openai_skills_key = os.environ.get('CB_OPENAI_SKILLS_KEY', '')
 elevenlabs_key = os.environ.get('CB_ELEVENLABS_KEY', '')
@@ -747,6 +810,23 @@ else:
     if 'discord' in config.get('channels', {}):
         del config['channels']['discord']
     config['bindings'] = []
+
+# Telegram config (only if using Telegram)
+if use_telegram and telegram_owner:
+    config['channels']['telegram'] = {
+        "enabled": True,
+        "botToken": "${TELEGRAM_BOT_TOKEN}",
+        "dmPolicy": "allowlist",
+        "allowFrom": [f"tg:{telegram_owner}"],
+        "groups": {
+            "*": {"requireMention": True}
+        },
+        "replyToMode": "first",
+        "streamMode": "partial"
+    }
+else:
+    if 'telegram' in config.get('channels', {}):
+        del config['channels']['telegram']
 
 # Agent allow list
 allow_agents = ["main"]
@@ -935,7 +1015,7 @@ PYEOF
   unset CB_DISCORD_MAIN_CHANNEL CB_DEPLOY_COMMS CB_DEPLOY_RESEARCH CB_DEPLOY_SECURITY
   unset CB_LLM_PROVIDER CB_OPENAI_SKILLS_KEY CB_ELEVENLABS_KEY
   unset CB_COMMS_NAME CB_DISCORD_COMMS_CHANNEL CB_RESEARCH_NAME CB_DISCORD_RESEARCH_CHANNEL
-  unset CB_SECURITY_NAME CB_DISCORD_SECURITY_CHANNEL 2>/dev/null || true
+  unset CB_SECURITY_NAME CB_DISCORD_SECURITY_CHANNEL CB_USE_TELEGRAM CB_TELEGRAM_OWNER 2>/dev/null || true
 }
 
 # ============================================================
@@ -1716,10 +1796,18 @@ show_summary() {
     echo "    $STEP. Open Discord and chat with your agent in the channel you configured"
     STEP=$((STEP + 1))
   fi
+  if [ "$USE_TELEGRAM" = true ]; then
+    echo ""
+    echo "    $STEP. Open your Telegram bot and start chatting"
+    STEP=$((STEP + 1))
+  fi
   echo ""
   echo -e "  ${BOLD}Interface:${NC}"
   if [ "$USE_DISCORD" = true ]; then
     echo "    • Discord bot configured"
+  fi
+  if [ "$USE_TELEGRAM" = true ]; then
+    echo "    • Telegram bot configured"
   fi
   if [ "$USE_CONSOLE" = true ]; then
     echo "    • ClawSuite Console installed at ~/clawsuite"

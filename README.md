@@ -35,7 +35,7 @@ The wizard auto-installs Node.js 22, Python, build tools, and OpenClaw. It asks 
 1. Your name and timezone
 2. Agent name, pronouns, emoji
 3. Agent tier (Solo / Team / Squad)
-4. Interface (Discord / ClawSuite Console / Both)
+4. Interface (Discord / Telegram / ClawSuite Console / combinations)
 5. LLM provider and API keys
 6. Optional tools (13 available, each Y/n)
 7. Built-in skills activation
@@ -56,6 +56,7 @@ nano ~/.openclaw/workspace/AGENTS.md
 ## What You Get
 
 - **Multi-agent architecture** — Main agent + optional specialist agents (Comms, Research, Security)
+- **Discord & Telegram support** — Chat via Discord bot, Telegram bot, or both
 - **Security-first** — Prompt injection defense, anti-loop rules, content tagging, credential isolation
 - **WAL Protocol** — Write-Ahead Log for corrections and decisions that survive context loss
 - **3-Layer Memory** — L1 (Brain) → L2 (Memory) → L3 (Reference) with file budgets
@@ -84,7 +85,7 @@ See the [Clawdboss docs](https://github.com/NanoFlow-io/clawdboss/tree/main/docs
 - Node.js 22+ (auto-installed by wizard)
 - 2GB+ RAM recommended (1GB works for Solo tier)
 - An LLM provider (GitHub Copilot, OpenAI, Anthropic, or others)
-- A Discord bot token (if using Discord interface)
+- A Discord bot token (if using Discord interface) and/or Telegram bot token from [@BotFather](https://t.me/BotFather) (if using Telegram)
 
 ## License
 
