@@ -27,8 +27,8 @@ NC='\033[0m'
 banner() {
   echo ""
   echo -e "${CYAN}╔══════════════════════════════════════════════╗${NC}"
-  echo -e "${CYAN}║${NC}  ${BOLD}🦞 Clawdboss Setup Wizard${NC}                   ${CYAN}║${NC}"
-  echo -e "${CYAN}║${NC}  Pre-hardened OpenClaw by NanoFlow            ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}  ${BOLD}🦞 Clawdboss Lite${NC}                            ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}  Hardened OpenClaw setup for power users      ${CYAN}║${NC}"
   echo -e "${CYAN}╚══════════════════════════════════════════════╝${NC}"
   echo ""
 }
@@ -1121,7 +1121,8 @@ BUFEOF
     local agent_type="$2"  # comms, research, security
 
     # Use bash parameter expansion for lowercase (no external commands)
-    local agent_id="${agent_name,,}"
+    local agent_id
+    agent_id="$(echo "$agent_name" | tr '[:upper:]' '[:lower:]')"
     # Replace spaces with hyphens
     agent_id="${agent_id// /-}"
 
